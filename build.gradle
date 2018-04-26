@@ -1,0 +1,102 @@
+/*
+ * Copyright (c) 2016 Constant Contact, Inc. All Rights Reserved.
+ * Boston, MA 02451, USA
+ * Phone: (781) 472-8100
+ * Fax: (781) 472-8101
+ * This software is the confidential and proprietary information
+ * of Constant Contact, Inc. created for Constant Contact, Inc.
+ * You shall not disclose such Confidential Information and shall use
+ * it only in accordance with the terms of the license agreement
+ * you entered into with Constant Contact, Inc.
+ */
+
+buildscript {
+    repositories {
+        jcenter()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
+        classpath "gradle.plugin.net.wooga.gradle:atlas-github:0.6.1"
+    }
+}
+
+allprojects {
+    repositories {
+        mavenLocal()
+        jcenter()
+    }
+
+    group = 'com.constantcontact'
+    def isRelease = Boolean.valueOf(project.hasProperty("release") ? project.property("release") as String : "false")
+    version = '5.2.1' + (isRelease ? "" : "-SNAPSHOT")
+}
+
+apply plugin: "net.wooga.github"
+
+github {
+    repositoryName = "constantcontact/java-sdk"
+}
+
+githubPublish {
+    description "publish all files in a directory"
+    from "components/build/libs", "sdk/build/libs", "sdk-rx/build/libs", "sdk-rx2/build/libs"
+    tagName = project.version
+    releaseName = project.version
+    prerelease = false
+    draft = true
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
+    apply plugin: 'com.jfrog.bintray'
+    apply plugin: 'project-report'
+    apply plugin: 'com.github.ben-manes.versions'
+
+    targetCompatibility = '1.7'
+    sourceCompatibility = '1.7'
+
+    dependencies {
+        compile 'javax.inject:javax.inject:1'
+        compile 'com.squareup.retrofit2:retrofit:2.3.0'
+        compile 'com.squareup.retrofit2:converter-jackson:2.3.0'
+        compile 'com.squareup.okhttp3:logging-interceptor:3.9.0'
+        compile 'org.apache.commons:commons-lang3:3.7'
+
+        testCompile 'junit:junit:4.12'
+        testCompile 'org.hamcrest:hamcrest-core:1.3'
+        testCompile 'org.hamcrest:hamcrest-library:1.3'
+        testCompile 'com.btmatthews.hamcrest:hamcrest-matchers:1.0.1'
+    }
+
+    ext {
+        bintray = [
+                user           : project.hasProperty("bintray_user") ? project.property('bintray_user') : System.getenv('BINTRAY_USER'),
+                key            : project.hasProperty("bintray_key") ? project.property('bintray_key') : System.getenv('BINTRAY_KEY'),
+                repo           : 'maven',
+                userOrg        : 'constantcontact',
+                licenses       : ['BSD 3-Clause'],
+                websiteUrl     : 'https://github.com/constantcontact/java-sdk',
+                issueTrackerUrl: 'https://github.com/constantcontact/java-sdk/issues',
+                vcsUrl         : 'https://github.com/constantcontact/java-sdk.git',
+                labels         : ['constant contact', 'constant', 'contact', 'sdk', 'email marketing']
+        ]
+    }
+
+    publishing {
+        repositories {
+            maven {
+                name = "Snapshot"
+                url "https://oss.jfrog.org/artifactory/oss-snapshot-local"
+                credentials(PasswordCredentials) {
+                    username = bintray.user
+                    password = bintray.key
+                }
+            }
+        }
+    }
+}
